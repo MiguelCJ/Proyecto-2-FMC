@@ -9,28 +9,6 @@ import sys
 import re
 
 
-"""
-get_line (array, index)
-
-array:  es el arreglo que guarda todo lo escrito en el documento txt (separa
-        por renglón.
-        
-index:  indica en qué índice de array va.
-
-line:   variable que regresa una línea del txt (toma un elemento de array
-        donde se guardan todas las líneas).
-
-Este método me permite obtener línea por línea de todo el documento txt.
-"""
-def get_line(array, index):
-
-    #print(f"PRUEBA PRUEBA PRUEBA: {array[index]}")
-    x = array[index]
-    line = x.split()
-    #print(line)
-
-    return line
-
 
 """
 check_line(linea, stack, count)
@@ -44,100 +22,65 @@ count: variable que guarda cuántas veces lee correctamente un while
 Esta función nos permite leer, línea por línea. Regresa el número de whiles
 que contiene el documento a revisar. 
 """
-"""
-def check_line(linea, stack, count):
-    
-    for element in linea:
-        if linea[0] == "while" or re.findall("^\}$", element): 
-            if re.findall("^\(", element):
-                stack.append("(")
-                print(f"PILAAAA:{stack}")
-            elif re.findall("\{$", element):
-                stack.append("{")
-                print(f"PILAAAA:{stack}")
-            elif re.findall("\)$", element):
-                stack.pop()
-                count += 1
-                print(f"PILAAAA:{stack}")
-            elif re.findall("^\}", element):
-                stack.pop()
-                count += 1
-                print(f"PILAAAA:{stack}")
-    
-    print(count)
-    #return stack
-    return count
-"""
-def check_line(linea, array, stack, index, count):
+
+def check_line(array):
+    stack = []
+    total_whiles = 0
+    fail = False
+    total_vars = 0
+    total_opers = 0
     
     try:
         for element in array:
-            linea = get_line(array, index)
-            #print(f"LINEA{linea}")
-            #print(f"ELEMENTO{element}")
-            if linea[0] == "while" or re.findall("\}$", element): 
-                if re.findall("^\(", element):
-                    stack.append("(")
-                    #print(f"PILAAAA:{stack}")
-                elif re.findall("\{$", element):
-                    stack.append("{")
-                    #print(f"PILAAAA:{stack}")
-                elif re.findall("\)$", element):
-                    stack.pop()
-                    #print(f"PILAAAA:{stack}")
-                elif re.findall("^\}", linea[0]):
-                    stack.pop()
-                    count += 1
-                    #print(f"PILAAAA:{stack}")    
-            index += 1
+            #linea = re.split('\s',element) why is this necesary?
+            #print(linea)
+            if re.findall('^(\s|\t)*while',element): #quiero checar si está bien escrito
+                variables = re.findall('\(((\w{1}|\d{1})\s*(>|=\s*=|<)\s*(\w{1}|\d{1}))\)',element)
+                if not variables: #entonces los paréntesis no están bien, bye
+                    fail = True
+                    break
+                else:
+                    numvars, numops = count_vars_and_ops(variables)
+                    total_opers += numops
+                    total_vars += numvars
+                
+                matches = re.findall('(\{$|{}$)', element)
+                if matches[0][0] == '{':
+                    stack.append('{')
+                elif matches[0][0] == '{}':
+                    total_whiles += 1
+                else:
+                    sys.exit("ERROR") #Creo que aquí me falta tomar en cuenta el caso donde la llave se abra en una línea abajo pero no sé si importe
+                    
+            if re.findall('\}$', element):
+                total_whiles += 1
+                stack.pop()
+                    
+                
     except:
         sys.exit("ERROR")
         
-    if len(stack) == 1:
-        print(f"Dentro del documento {Arch} existen: {count} whiles")
+    if len(stack) == 0 and not fail:
+        print(f"Dentro del documento {Arch} existen: {total_whiles} whiles")
+        print(f"Dentro del documento {Arch} existen: {total_vars} variables")
+        print(f"Dentro del documento {Arch} existen: {total_opers} variables")
+        
     else:
         sys.exit("ERROR")
         
-            
-"""
-count_whiles(line, array, index, stack, resp, cont)
-
-line:   línea del documento revisado
-
-array:  arreglo donde se guardan todas las líneas del documento
-
-index:  índice para realizar la recursividad
-
-stack:  pila que se utiliza en el método check_line
-
-resp:   pila resultante
-
-cont:   regresa cuántos whiles, bien escritos, hay en el documento
-
-"""
-
-"""
-def count_whiles(line, array, index, stack, resp, cont): #resp es la pila
-    
-    for element in array:
-        resp = check_line(element, stack, array, index, cont)
-        index += 1
-        print(resp)
-"""  
-    #return print(resp)
-"""
-    if index != len(array):
-        linea = get_line(array, index)
-        print(linea)
-        resp = check_line(linea, stack, cont)
-        index += 1
-        print(cont)
-        return count_whiles(linea, array, index, stack, resp, cont)
-"""
-    
-    #print(resp)
-   
-    
+def count_vars_and_ops(variables):
+   numops = 0
+   numvars = 0
+   tokens = variables[0]
+   i = 1
+   while i < len(tokens):
+       if re.findall('(=\s*=|>|<)',tokens[i]):
+           numops += 1
+       elif re.findall('\D',tokens[i]): #no lo cuentas como variable si es un dígito
+           numvars += 1
+       i+=1
+   #print(tokens)
+   return numvars, numops
 #----------------------------------------------------------------------------#
 #                                   MAIN                                     #
 #----------------------------------------------------------------------------#
@@ -174,7 +117,7 @@ def main():
     stack = ["init"]
     line = " "
     #count_whiles(line, array, 0, stack, [], 0)
-    check_line(line, array, stack, 0, 0)
+    check_line(array)
     
     
 if __name__ == "__main__":
